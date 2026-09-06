@@ -1,0 +1,45 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    #restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      bash -c "
+      ollama serve
+      "
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+volumes:
+  ollama_data:
+    name: ollama_data
+    driver: local
+
+
+    
+    # entrypoint: >
+    #   bash -c "
+    #   ollama serve &
+    #   sleep 3 &&
+    #   ollama pull deepseek-r1 &&
+    #   ollama run deepseek-r1:1.5b
+    #   "
+    
+    #   ollama run deepseek-r1
+    #   ollama run deepseek-r1:1.5b
+    #   ollama run bramvanroy/fietje-2b-chat:Q3_K_M
+    #   ollama run jobautomation/OpenEuroLLM-Dutch
+    #   ollama run gemma4:e4b-it-q4_K_M
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]   # remove if CPU-only
