@@ -11,6 +11,10 @@ services:
       bash -c "
       ollama serve
       "
+    # force ways to use the NVIDIA runtime
+    gpu: all
+    devices:
+      - "nvidia.com/gpu=all"
     deploy:
       resources:
         reservations:
@@ -23,6 +27,9 @@ volumes:
     name: ollama_data
     driver: local
 
+# source https://podman-desktop.io/docs/podman/gpu
+# source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-yum-or-dnf
+# source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html
 
     
     # entrypoint: >
