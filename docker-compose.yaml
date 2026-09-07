@@ -1,31 +1,41 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    #restart: unless-stopped
+  vllm-gemma:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-gemma
+    depends_on:
+      - gemma4-downloader
+    environment:
+      VLLM_MODEL: "/models/gemma4"
+      VLLM_MAX_MODEL_LEN: "32768"          # larger context = better multi-session isolation
+      VLLM_GPU_MEMORY_UTILIZATION: "0.90"  # maximize KV cache space
+      VLLM_ENABLE_AUTO_BATCHING: "true"    # continuous batching
+      VLLM_MAX_NUM_SEQS: "512"             # number of parallel sequences
+      VLLM_MAX_PARALLEL_REQUESTS: "256"    # simultaneous requests allowed
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
     ports:
-      - "11434:11434"
+      - "8000:8000"
     volumes:
-      - ollama_data:/root/.ollama
-    entrypoint: >
-      bash -c "
-      ollama serve
-      "
-    # force ways to use the NVIDIA runtime
-    gpu: all
+      - ./models/gemma4:/models/gemma4:ro
+      - ./datasets:/datasets:ro
     devices:
       - "nvidia.com/gpu=all"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-volumes:
-  ollama_data:
-    name: ollama_data
-    driver: local
+    restart: unless-stopped
+
+  crewai-app:
+    build: ./crewai-app
+    container_name: crewai-app
+    restart: unless-stopped
+    environment:
+      OPENAI_API_KEY: "local"   # dummy, not used
+      OPENAI_BASE_URL: "http://vllm-gemma:8000/v1"
+      OPENAI_MODEL_NAME: "gemma4"
+      DATASET_ROOT: "/datasets"
+    depends_on:
+      - vllm-gemma
+    volumes:
+      - ./datasets:/datasets:ro
+
 
 # source https://podman-desktop.io/docs/podman/gpu
 # source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-yum-or-dnf
