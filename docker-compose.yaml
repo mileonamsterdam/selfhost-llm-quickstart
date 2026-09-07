@@ -27,8 +27,6 @@ services:
   vllm-gemma:
     image: vllm/vllm-openai:latest
     container_name: vllm-gemma
-    depends_on:
-      - gemma4-downloader
     environment:
       VLLM_MODEL: "/models/gemma4"
       VLLM_MAX_MODEL_LEN: "32768"          # larger context = better multi-session isolation
