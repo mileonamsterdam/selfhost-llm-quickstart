@@ -9,11 +9,11 @@ services:
     volumes:
       - ./models:/models
       - ./downloader/main.py:/app/main.py
-    environment:
-      HF_HUB_ENABLE_HF_TRANSFER: '1'
     restart: 'no'
 
   vllm-gemma:
+    profiles:
+      - live
     image: vllm/vllm-openai:latest
     container_name: vllm-gemma
     environment:
@@ -35,6 +35,8 @@ services:
     restart: unless-stopped
 
   crewai-app:
+    profiles:
+      - live
     build: ./crewai-app
     container_name: crewai-app
     restart: unless-stopped
@@ -48,27 +50,38 @@ services:
     volumes:
       - ./datasets:/datasets:ro
 
+  open-webui:
+    profiles:
+      - live
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: open-webui
+    depends_on:
+      - vllm-gemma
+    environment:
+      OLLAMA_BASE_URL: ""                 # disable Ollama
+      OPENAI_API_BASE_URL: "http://vllm-gemma:8000/v1"
+      OPENAI_API_KEY: "local"            # dummy key
+      WEBUI_AUTH: "true"                 # enable multi-user login
+      WEBUI_SESSION_MODE: "per-user"     # isolate sessions
+      WEBUI_CLEANUP_INACTIVE_SESSIONS: "true"
+    volumes:
+      - webui-data:/app/backend/data
+    ports:
+      - "3000:8080"
+    restart: unless-stopped
+
+volumes:
+  webui-data:
+    driver: local
+    name: webui-data
+
 
 # source https://podman-desktop.io/docs/podman/gpu
 # source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-yum-or-dnf
 # source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/cdi-support.html
-
-    
-    # entrypoint: >
-    #   bash -c "
-    #   ollama serve &
-    #   sleep 3 &&
-    #   ollama pull deepseek-r1 &&
-    #   ollama run deepseek-r1:1.5b
-    #   "
     
     #   ollama run deepseek-r1
     #   ollama run deepseek-r1:1.5b
     #   ollama run bramvanroy/fietje-2b-chat:Q3_K_M
     #   ollama run jobautomation/OpenEuroLLM-Dutch
     #   ollama run gemma4:e4b-it-q4_K_M
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - capabilities: [gpu]   # remove if CPU-only
