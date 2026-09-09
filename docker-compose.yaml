@@ -1,22 +1,10 @@
 services:
-  vllm-gemma4-downloader:
-    build:
-      context: ./downloader
-      dockerfile: Dockerfile
-    profiles:
-      - downloader
-    container_name: vllm-gemma4-downloader
-    volumes:
-      - ./models:/models
-      - ./downloader/main.py:/app/main.py
-    restart: 'no'
-
-  vllm-gemma:
+  vllm:
     profiles:
       - live
       - vllm
     image: docker.io/vllm/vllm-openai:latest
-    container_name: vllm-gemma
+    container_name: vllm
     runtime: nvidia
     environment:
       HF_TOKEN: ${HF_TOKEN}
@@ -27,8 +15,7 @@ services:
     ports:
       - "8000:8000"
     ipc: host
-    command: >
-      --model Qwen/Qwen3-0.6B
+    command: google/gemma-3-4b-it --port 8000 --max-num-seqs 512 --max-parallel-requests 256 # --max-model-len 32768 --gpu-memory-utilization 0.90 --enable-auto-batching true
 
    # restart: unless-stopped
 
@@ -40,24 +27,23 @@ services:
     #restart: unless-stopped
     environment:
       OPENAI_API_KEY: "local"   # dummy, not used
-      OPENAI_BASE_URL: "http://vllm-gemma:8000/v1"
+      OPENAI_BASE_URL: "http://vllm:8000/v1"
       OPENAI_MODEL_NAME: "gemma4"
       DATASET_ROOT: "/datasets"
     depends_on:
-      - vllm-gemma
+      - vllm
     volumes:
       - ./datasets:/datasets:ro
 
   open-webui:
     profiles:
       - live
+      - open-webui
     image: ghcr.io/open-webui/open-webui:latest
     container_name: open-webui
-    depends_on:
-      - vllm-gemma
     environment:
       OLLAMA_BASE_URL: ""                 # disable Ollama
-      OPENAI_API_BASE_URL: "http://vllm-gemma:8000/v1"
+      OPENAI_API_BASE_URL: "http://vllm:8000/v1"
       OPENAI_API_KEY: "local"            # dummy key
       WEBUI_AUTH: "true"                 # enable multi-user login
       WEBUI_SESSION_MODE: "per-user"     # isolate sessions
@@ -67,16 +53,31 @@ services:
     ports:
       - "3000:8080"
     #restart: unless-stopped
+    entrypoint: tail -f anything  # keep container running, webui will start automatically
+ 
+
+    
+      # VLLM_MODEL: "/models/gemma4"
+      # VLLM_MAX_MODEL_LEN: "32768"          # larger context = better multi-session isolation
+      # VLLM_GPU_MEMORY_UTILIZATION: "0.90"  # maximize KV cache space
+      # VLLM_ENABLE_AUTO_BATCHING: "true"    # continuous batching
+      # VLLM_MAX_NUM_SEQS: "512"             # number of parallel sequences
+      # VLLM_MAX_PARALLEL_REQUESTS: "256"    # simultaneous requests allowed
+      # NVIDIA_VISIBLE_DEVICES: "all"
+      # NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
 
 volumes:
+  open-webui:
+    driver: local
+    name: open-webui
   webui-data:
     driver: local
     name: webui-data
-
   cache_huggingface:
     driver: local
     name: cache_huggingface
 
+# source https://docs.vllm.ai/en/latest/deployment/frameworks/open-webui/
 # source https://docs.vllm.ai/en/stable/deployment/docker/#pre-built-images
 # source https://podman-desktop.io/docs/podman/gpu
 # source https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installing-with-yum-or-dnf
