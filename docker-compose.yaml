@@ -15,7 +15,7 @@ services:
     ports:
       - "8000:8000"
     ipc: host
-    command: google/gemma-3-4b-it --port 8000 --max-num-seqs 512 --max-parallel-requests 256 # --max-model-len 32768 --gpu-memory-utilization 0.90 --enable-auto-batching true
+    command: google/gemma-3-4b-it #--port 8000 --max-num-seqs 512 --max-parallel-requests 256 # --max-model-len 32768 --gpu-memory-utilization 0.90 --enable-auto-batching true
 
    # restart: unless-stopped
 
